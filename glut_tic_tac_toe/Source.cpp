@@ -19,7 +19,7 @@ int border_indent = 50;
 
 int frame_step = (win_x_size - border_indent * 2) / 3;
 
-bool move = 1;
+short int move = 0;
 bool gameOver = 0;
 
 short int table[3][3];
@@ -55,7 +55,7 @@ void changeSize(int w, int h) {
 void drawX(int x, int y) {
 	int fig_indent = 10;
 	glColor3f(1, 0, 0);
-	glBegin(GL_LINES); //frame
+	glBegin(GL_LINES);
 	glVertex2f(x - frame_step / 2 + fig_indent, y - frame_step / 2 + fig_indent);
 	glVertex2f(x + frame_step / 2 - fig_indent, y + frame_step / 2 - fig_indent);
 	glVertex2f(x - frame_step / 2 + fig_indent, y + frame_step / 2 - fig_indent);
@@ -81,20 +81,13 @@ void drawO(int x, int y) {
 void drawLine() {
 	bool temp = 0;
 	glColor3f(0, 1, 0);
-	glLineWidth(5);
+	glLineWidth(3);
 	glBegin(GL_LINES);
 	for (int i = 0; i < 3; i++)
 		for (int j = 0; j < 3; j++) {
 			if (linePoints[j][i]) {
 				glVertex2f(j * frame_step + border_indent + frame_step / 2,
 					i * frame_step + border_indent + frame_step / 2);
-				if (temp == 1)
-				{
-					//glEnd();
-					//Sleep(3000);
-					gameOver = 1;
-				}
-				temp = 1;
 			}
 		}
 	glEnd();
@@ -137,10 +130,9 @@ short int winCheck() {
 
 void clickCheck(int ind_x, int ind_y) {
 	if (table[ind_x][ind_y] < 1 ) {
-		table[ind_x][ind_y] = int(move) + 1;
-		move = !move;
+		table[ind_x][ind_y] = (move + 1) % 2 + 1;
+		move++;
 	}
-	winCheck();
 }
 
 void yesNoClickCheck(int x, int y) {
@@ -187,22 +179,29 @@ void RenderScene() {
 		drawFigs();
 
 		drawLine();
-		if (gameOver) { 
-			glutSwapBuffers();
-			Sleep(1500); 
-		}
 	} else {
 		glClear(GL_COLOR_BUFFER_BIT);
-		//glBegin(GL_POINTS);
-		//glVertex2f(curs_x - 5, curs_y - 5);
-		//glEnd();
-		int x1 = win_x_size / 6 - glutBitmapWidth(GLUT_BITMAP_TIMES_ROMAN_24, '0') * 1.5 + win_x_size / 3 * 1;
-		//char* scr = new char[4];
-		//memset(scr, '\0', 3);
-		char msg[] = "WIN\0";
-		//char *msg = new char[50];
-		//strcpy_s(msg)
-		for (char* c = msg; *c != '\0'; c++) {
+
+
+		char drawMsg[] = "DRAW\0";
+		char winMsg[] = "WON\0";
+
+
+		char* c = new char[10];
+
+		if (winCheck() == FIGURE_X)
+			sprintf_s(c, 10, "X's %s", winMsg);
+		if (winCheck() == FIGURE_O)
+			sprintf_s(c, 10, "O's %s", winMsg);
+
+		int x1 = win_x_size / 2 - glutBitmapWidth(GLUT_BITMAP_TIMES_ROMAN_24, '0') * 5;
+		if (move == 9 && winCheck() == 0) {
+			c = drawMsg;
+			x1 += glutBitmapWidth(GLUT_BITMAP_TIMES_ROMAN_24, '0') * 2;
+		}
+
+		
+		for (; *c != '\0'; c++) {
 			glRasterPos2f(x1, 30);
 			glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, *c);
 			x1 += glutBitmapWidth(GLUT_BITMAP_TIMES_ROMAN_24, *c) + 5;
@@ -227,6 +226,16 @@ void MouseClick(int button, int state, int width, int height) {
 		yesNoClickCheck(curs_x, curs_y);
 }
 
+void update(int value) {
+	RenderScene();
+	if ((!gameOver && winCheck() > 0) || (move == 9)) {
+		RenderScene();
+		gameOver = 1;
+		Sleep(1500);
+	}
+	glutTimerFunc(16, update, 1);
+}
+
 int main(int argc, char** argv) {
 	for (int i = 0; i < 3; i++)
 		for (int j = 0; j < 3; j++)
@@ -238,8 +247,9 @@ int main(int argc, char** argv) {
 	glutCreateWindow("Tic-Tac-Toe");
 
 	glutDisplayFunc(RenderScene);
-	glutIdleFunc(RenderScene);
 	glutReshapeFunc(changeSize);
+
+	glutTimerFunc(16, update, 1); //timer 16ms, about 60 fps
 
 	glutMotionFunc(MousePosition);
 	glutMouseFunc(MouseClick);
