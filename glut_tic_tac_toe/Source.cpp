@@ -21,6 +21,7 @@ int frame_step = (win_x_size - border_indent * 2) / 3;
 
 short int move = 0;
 bool gameOver = 0;
+bool firstPlayer = 1;
 
 short int table[3][3];
 
@@ -128,9 +129,22 @@ short int winCheck() {
 	return 0;
 }
 
+void restart() {
+	for (int i = 0; i < 3; i++)
+		for (int j = 0; j < 3; j++) {
+			table[i][j] = 0;
+			linePoints[i][j] = 0;
+		}
+	gameOver = 0;
+	move = 0;
+}
+
 void clickCheck(int ind_x, int ind_y) {
 	if (table[ind_x][ind_y] < 1 ) {
-		table[ind_x][ind_y] = (move + 1) % 2 + 1;
+		if (firstPlayer)
+			table[ind_x][ind_y] = (move + 1) % 2 + 1;
+		else
+			table[ind_x][ind_y] = (move) % 2 + 1;
 		move++;
 	}
 }
@@ -156,6 +170,7 @@ void drawFigs() {
 
 
 void RenderScene() {
+	glClear(GL_COLOR_BUFFER_BIT);
 	if (!gameOver) {
 		glBegin(GL_LINE_LOOP); //frame
 		glVertex2f(border_indent, border_indent);
@@ -180,9 +195,6 @@ void RenderScene() {
 
 		drawLine();
 	} else {
-		glClear(GL_COLOR_BUFFER_BIT);
-
-
 		char drawMsg[] = "DRAW\0";
 		char winMsg[] = "WON\0";
 
@@ -206,6 +218,7 @@ void RenderScene() {
 			glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, *c);
 			x1 += glutBitmapWidth(GLUT_BITMAP_TIMES_ROMAN_24, *c) + 5;
 		}
+
 	}
 
 	glutSwapBuffers();
@@ -226,13 +239,44 @@ void MouseClick(int button, int state, int width, int height) {
 		yesNoClickCheck(curs_x, curs_y);
 }
 
+void processMoveMenu(int option) {
+	if (move > 0) {
+		MessageBox(NULL, "Game already has started", "ERROR", MB_ICONERROR);
+		return;
+	}
+	switch (option) {
+		case 1:
+			firstPlayer = FIGURE_X - 1;
+			break;
+		case 2:
+			firstPlayer = FIGURE_O - 1;
+			break;
+	}
+}
+
+void processSecondPlayerMenu(int option) {
+
+}
+
+void processMainMenu(int option) {
+	restart();
+}
+
 void update(int value) {
 	RenderScene();
 	if ((!gameOver && winCheck() > 0) || (move == 9)) {
 		RenderScene();
 		gameOver = 1;
 		Sleep(1500);
+
+		RenderScene();
+
+		if (MessageBox(NULL, "Do you want to continue?", "Continue?", MB_YESNO | MB_ICONEXCLAMATION) == IDYES)
+			restart();
+		else
+			exit(0);
 	}
+
 	glutTimerFunc(16, update, 1);
 }
 
@@ -253,6 +297,27 @@ int main(int argc, char** argv) {
 
 	glutMotionFunc(MousePosition);
 	glutMouseFunc(MouseClick);
+
+	int moveMenu;
+	int secondPlayerMenu;
+	int mainMenu;
+
+
+	moveMenu = glutCreateMenu(processMoveMenu);
+	glutAddMenuEntry("X", 1);
+	glutAddMenuEntry("O", 2);
+
+	secondPlayerMenu = glutCreateMenu(processSecondPlayerMenu);
+	glutAddMenuEntry("Play with human", 1);
+	glutAddMenuEntry("Play with Computer", 2);
+
+	mainMenu = glutCreateMenu(processMainMenu);
+	glutAddSubMenu("Who moves first", moveMenu);
+	glutAddSubMenu("Second Player", secondPlayerMenu);
+	glutAddMenuEntry("Restart", 1);
+
+	glutAttachMenu(GLUT_RIGHT_BUTTON);
+
 
 	glutMainLoop();
 }
