@@ -23,7 +23,14 @@ short int move = 0;
 bool gameOver = 0;
 bool firstPlayer = 1;
 
+
 short int table[3][3];
+
+bool computerPlayer = 0;
+
+short int cellPriority[3][3] = {2, 1, 2,
+								1, 3, 1,
+								2, 1, 2};
 
 bool linePoints[3][3];
 
@@ -86,7 +93,7 @@ void drawLine() {
 	glBegin(GL_LINES);
 	for (int i = 0; i < 3; i++)
 		for (int j = 0; j < 3; j++) {
-			if (linePoints[j][i]) {
+			if (linePoints[i][j]) {
 				glVertex2f(j * frame_step + border_indent + frame_step / 2,
 					i * frame_step + border_indent + frame_step / 2);
 			}
@@ -99,52 +106,108 @@ void drawLine() {
 
 
 short int winCheck() {
+	for (int i = 0; i < 3; i++)
+		if (table[0][i] == table[1][i] && table[1][i] == table[2][i] && table[0][i] > 0)
+			return table[0][i];
 
+	for (int i = 0; i < 3; i++)
+		if (table[i][0] == table[i][1] && table[i][1] == table[i][2] && table[i][0] > 0)
+			return table[i][0];
+
+
+	if (table[0][0] == table[1][1] && table[1][1] == table[2][2] && table[0][0] > 0)
+		return table[0][0];
+
+	if (table[0][2] == table[1][1] && table[1][1] == table[2][0] && table[0][2] > 0)
+		return table[0][2];
+
+	return 0;
+}
+
+void makeLinePoints() {
 	for (int i = 0; i < 3; i++) {
 		if (table[0][i] == table[1][i] && table[1][i] == table[2][i] && table[0][i] > 0) {
 			linePoints[0][i] = 1;
 			linePoints[2][i] = 1;
-			return table[0][i];
 		}
 	}
 	for (int i = 0; i < 3; i++) {
 		if (table[i][0] == table[i][1] && table[i][1] == table[i][2] && table[i][0] > 0) {
 			linePoints[i][0] = 1;
 			linePoints[i][2] = 1;
-			return table[i][0];
 		}
 	}
 
 	if (table[0][0] == table[1][1] && table[1][1] == table[2][2] && table[0][0] > 0) {
 		linePoints[0][0] = 1;
 		linePoints[2][2] = 1;
-		return table[0][0];
 	}
 	if (table[0][2] == table[1][1] && table[1][1] == table[2][0] && table[0][2] > 0) {
 		linePoints[0][2] = 1;
 		linePoints[2][0] = 1;
-		return table[0][2];
 	}
-
-	return 0;
 }
 
 void restart() {
 	for (int i = 0; i < 3; i++)
 		for (int j = 0; j < 3; j++) {
-			table[i][j] = 0;
-			linePoints[i][j] = 0;
+			table[j][i] = 0;
+			linePoints[j][i] = 0;
 		}
 	gameOver = 0;
 	move = 0;
+
+	for (int i = 0; i < 3; i++) //reset cell priorities
+		for (int j = 0; j < 3; j++) {
+			if (i - j == 1 || j - i == 1)
+				cellPriority[i][j] = 1;
+			else
+				cellPriority[i][j] = 2;
+			if (i == 1 && j == 1)
+				cellPriority[i][j] = 3;
+		}
+}
+
+void computerSetPriorities() {
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			if (table[i][j] == 0) {
+				table[i][j] = FIGURE_O; //Win move check
+				if (winCheck() > 0)
+					cellPriority[i][j] = 6;
+
+				table[i][j] = FIGURE_X; //Enemy win move check
+				if (winCheck() > 0)
+					cellPriority[i][j] = 5;
+
+				table[i][j] = 0;
+			}
+		}
+	}
+}
+
+void computerMove() { 
+	computerSetPriorities();
+
+	short int moveX, moveY, max = 0;
+	for (int i = 0; i < 3; i++)
+		for (int j = 0; j < 3; j++)
+			if (cellPriority[i][j] > max && table[i][j] == 0) {
+				moveX = i;
+				moveY = j;
+				max = cellPriority[i][j];
+			}
+	table[moveX][moveY] = FIGURE_O; //computer is always O
+
+	computerSetPriorities();
 }
 
 void clickCheck(int ind_x, int ind_y) {
-	if (table[ind_x][ind_y] < 1 ) {
+	if (table[ind_y][ind_x] < 1 ) {
 		if (firstPlayer)
-			table[ind_x][ind_y] = (move + 1) % 2 + 1;
+			table[ind_y][ind_x] = (move + 1) % 2 + 1;
 		else
-			table[ind_x][ind_y] = (move) % 2 + 1;
+			table[ind_y][ind_x] = (move) % 2 + 1;
 		move++;
 	}
 }
@@ -157,10 +220,10 @@ void drawFigs() {
 	glLineWidth(5);
 	for (int i = 0; i < 3; i++)
 		for (int j = 0; j < 3; j++) {
-			if (table[j][i] == FIGURE_X)
+			if (table[i][j] == FIGURE_X)
 				drawX(j * frame_step + border_indent + frame_step / 2,
 					i * frame_step + border_indent + frame_step / 2);
-			if (table[j][i] == FIGURE_O)
+			if (table[i][j] == FIGURE_O)
 				drawO(j * frame_step + border_indent + frame_step / 2,
 					i * frame_step + border_indent + frame_step / 2);
 		}
@@ -201,10 +264,14 @@ void RenderScene() {
 
 		char* c = new char[10];
 
-		if (winCheck() == FIGURE_X)
+		if (winCheck() == FIGURE_X && !computerPlayer)
 			sprintf_s(c, 10, "X's %s", winMsg);
-		if (winCheck() == FIGURE_O)
+		if (winCheck() == FIGURE_O && !computerPlayer)
 			sprintf_s(c, 10, "O's %s", winMsg);
+		if (winCheck() == FIGURE_X && computerPlayer)
+			sprintf_s(c, 10, "YOU %s", winMsg);
+		if (winCheck() == FIGURE_O && computerPlayer)
+			sprintf_s(c, 10, "BOT %s", winMsg);
 
 		int x1 = win_x_size / 2 - glutBitmapWidth(GLUT_BITMAP_TIMES_ROMAN_24, '0') * 5;
 		if (move == 9 && winCheck() == 0) {
@@ -229,6 +296,8 @@ void MousePosition(int x, int y) {
 }
 
 void MouseClick(int button, int state, int width, int height) {
+	if (state == GLUT_DOWN)
+		return;
 	curs_x = width;
 	curs_y = height;
 	int ind_x = (curs_x - border_indent) / frame_step;
@@ -241,8 +310,10 @@ void MouseClick(int button, int state, int width, int height) {
 
 void processMoveMenu(int option) {
 	if (move > 0) {
-		MessageBox(NULL, "Game already has started", "ERROR", MB_ICONERROR);
-		return;
+		if (MessageBox(NULL, "Game already has started. Restart game?", "Game started", MB_ICONWARNING | MB_YESNO) == IDYES)
+			restart();
+		else
+			return;
 	}
 	switch (option) {
 		case 1:
@@ -255,7 +326,20 @@ void processMoveMenu(int option) {
 }
 
 void processSecondPlayerMenu(int option) {
-
+	if (move > 0) {
+		if (MessageBox(NULL, "Game already has started. Restart game?", "Game started", MB_ICONWARNING | MB_YESNO) == IDYES)
+			restart();
+		else
+			return;
+	}
+	switch (option) {
+	case 1:
+		computerPlayer = 0;
+		break;
+	case 2:
+		computerPlayer = 1;
+		break;
+	}
 }
 
 void processMainMenu(int option) {
@@ -263,8 +347,10 @@ void processMainMenu(int option) {
 }
 
 void update(int value) {
+
 	RenderScene();
 	if ((!gameOver && winCheck() > 0) || (move == 9)) {
+		makeLinePoints();
 		RenderScene();
 		gameOver = 1;
 		Sleep(1500);
@@ -275,6 +361,11 @@ void update(int value) {
 			restart();
 		else
 			exit(0);
+	}
+	
+	if (computerPlayer && move % 2 == firstPlayer && !gameOver) {
+		computerMove();
+		move++;
 	}
 
 	glutTimerFunc(16, update, 1);
