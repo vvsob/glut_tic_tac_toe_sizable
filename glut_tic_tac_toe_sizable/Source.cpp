@@ -8,31 +8,58 @@
 #include <Windows.h>
 #include <string>
 
-//cursor position
-int curs_x;
-int curs_y;
+unsigned int tableSize = 3;
 
 int win_x_size = 700;
 int win_y_size = 700;
 
 int border_indent = 50;
 
-int frame_step = (win_x_size - border_indent * 2) / 3;
+int frame_step = (win_x_size - border_indent * 2) / tableSize;
 
 short int move = 0;
 bool gameOver = 0;
 bool firstPlayer = 1;
 
 
-short int table[3][3];
+short int **table = new short int*[tableSize];
 
 bool computerPlayer = 0;
 
-short int cellPriority[3][3] = {2, 1, 2,
-								1, 3, 1,
-								2, 1, 2};
+short int **cellPriority = new short int*[tableSize];
 
-bool linePoints[3][3];
+/*short int cellPriority[3][3] = {2, 1, 2,
+								  1, 3, 1,
+								  2, 1, 2};*/
+
+bool **linePoints = new bool*[tableSize];
+
+void init() {
+	for (unsigned int i = 0; i < tableSize; i++)
+		table[i] = new short int[tableSize];
+
+	for (unsigned int i = 0; i < tableSize; i++)
+		cellPriority[i] = new short int[tableSize];
+
+	for (unsigned int i = 0; i < tableSize; i++)
+		linePoints[i] = new bool[tableSize];
+
+	for (unsigned int i = 0; i < tableSize; i++)
+		for (unsigned int j = 0; j < tableSize; j++) {
+			table[i][j] = 0;
+			linePoints[i][j] = 0;
+		}
+
+	for (int i = 0; i < 3; i++) //set cell priorities
+		for (int j = 0; j < 3; j++) {
+			if (i - j == 1 || j - i == 1)
+				cellPriority[i][j] = 1;
+			else
+				cellPriority[i][j] = 2;
+			if (i == 1 && j == 1)
+				cellPriority[i][j] = 3;
+		}
+}
 
 void changeSize(int w, int h) {
 	// предупредим деление на ноль
@@ -212,10 +239,6 @@ void clickCheck(int ind_x, int ind_y) {
 	}
 }
 
-void yesNoClickCheck(int x, int y) {
-
-}
-
 void drawFigs() {
 	glLineWidth(5);
 	for (int i = 0; i < 3; i++)
@@ -298,14 +321,16 @@ void MousePosition(int x, int y) {
 void MouseClick(int button, int state, int width, int height) {
 	if (state == GLUT_DOWN)
 		return;
-	curs_x = width;
-	curs_y = height;
-	int ind_x = (curs_x - border_indent) / frame_step;
-	int ind_y = (curs_y - border_indent) / frame_step;
-	if (!gameOver)
+
+	int ind_x = (width - border_indent) / frame_step;
+	int ind_y = (height - border_indent) / frame_step;
+	if (!gameOver &&
+		width < win_x_size - border_indent && //right
+		width > border_indent && //left
+		height < win_y_size - border_indent && // down
+		height > border_indent // up
+		)
 		clickCheck(ind_x, ind_y);
-	else
-		yesNoClickCheck(curs_x, curs_y);
 }
 
 void processMoveMenu(int option) {
@@ -363,7 +388,7 @@ void update(int value) {
 			exit(0);
 	}
 	
-	if (computerPlayer && move % 2 == firstPlayer && !gameOver) {
+	if (computerPlayer && (bool(move % 2) == firstPlayer) && !gameOver) {
 		computerMove();
 		move++;
 	}
@@ -372,9 +397,8 @@ void update(int value) {
 }
 
 int main(int argc, char** argv) {
-	for (int i = 0; i < 3; i++)
-		for (int j = 0; j < 3; j++)
-			linePoints[i][j] = 0;
+	init();
+
 	glutInit(&argc, argv);
 	glutInitWindowPosition(100, 100);
 	glutInitWindowSize(win_x_size, win_y_size);

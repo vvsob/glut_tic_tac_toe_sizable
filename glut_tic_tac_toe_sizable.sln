@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27428.2005
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "glut_tic_tac_toe", "glut_tic_tac_toe\glut_tic_tac_toe.vcxproj", "{CBEDC56E-5F70-46AC-ACDF-B598AED81AA1}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "glut_tic_tac_toe_sizable", "glut_tic_tac_toe_sizable\glut_tic_tac_toe.vcxproj", "{CBEDC56E-5F70-46AC-ACDF-B598AED81AA1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
