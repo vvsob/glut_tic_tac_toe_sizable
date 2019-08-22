@@ -8,7 +8,8 @@
 #include <Windows.h>
 #include <string>
 
-unsigned int tableSize = 3;
+unsigned int tableSize = 5;
+unsigned int figToWin = 4;
 
 int win_x_size = 700;
 int win_y_size = 700;
@@ -50,13 +51,13 @@ void init() {
 			linePoints[i][j] = 0;
 		}
 
-	for (int i = 0; i < 3; i++) //set cell priorities
-		for (int j = 0; j < 3; j++) {
-			if (i - j == 1 || j - i == 1)
+	for (unsigned int i = 0; i < tableSize; i++) //set cell priorities
+		for (unsigned int j = 0; j < tableSize; j++) {
+			if (i == 0 || j == 0 || i == tableSize - 1 || j == tableSize - 1) {
 				cellPriority[i][j] = 1;
-			else
-				cellPriority[i][j] = 2;
-			if (i == 1 && j == 1)
+				if (i == j || j == tableSize - i - 1)
+					cellPriority[i][j] = 2;
+			} else
 				cellPriority[i][j] = 3;
 		}
 }
@@ -118,8 +119,8 @@ void drawLine() {
 	glColor3f(0, 1, 0);
 	glLineWidth(3);
 	glBegin(GL_LINES);
-	for (int i = 0; i < 3; i++)
-		for (int j = 0; j < 3; j++) {
+	for (int i = 0; i < tableSize; i++)
+		for (int j = 0; j < tableSize; j++) {
 			if (linePoints[i][j]) {
 				glVertex2f(j * frame_step + border_indent + frame_step / 2,
 					i * frame_step + border_indent + frame_step / 2);
@@ -133,20 +134,50 @@ void drawLine() {
 
 
 short int winCheck() {
-	for (int i = 0; i < 3; i++)
-		if (table[0][i] == table[1][i] && table[1][i] == table[2][i] && table[0][i] > 0)
-			return table[0][i];
+	unsigned int count = 0;
 
-	for (int i = 0; i < 3; i++)
-		if (table[i][0] == table[i][1] && table[i][1] == table[i][2] && table[i][0] > 0)
-			return table[i][0];
+	for (unsigned int i = 0; i < tableSize; i++)
+		for (unsigned int j = 0; j < tableSize; j++) {
+			//horizontal
+			for (unsigned int k = i; k < tableSize; k++)
+				if (table[i][j] == table[k][j])
+					count++;
+				else
+					break;
+			if (count >= figToWin)
+				return table[i][j];
+			count = 0;
 
+			//vertical
+			for (unsigned int k = j; k < tableSize; k++)
+				if (table[i][j] == table[i][k])
+					count++;
+				else
+					break;
+			if (count >= figToWin)
+				return table[i][j];
+			count = 0;
 
-	if (table[0][0] == table[1][1] && table[1][1] == table[2][2] && table[0][0] > 0)
-		return table[0][0];
+			//diagonal main
+			for (unsigned int k = 0; i + k < tableSize && j + k < tableSize; k++)
+				if (table[i][j] == table[i + k][j + k])
+					count++;
+				else
+					break;
+			if (count >= figToWin)
+				return table[i][j];
+			count = 0;
 
-	if (table[0][2] == table[1][1] && table[1][1] == table[2][0] && table[0][2] > 0)
-		return table[0][2];
+			//diagonal side
+			for (unsigned int k = 0; i + k < tableSize && j - k < tableSize; k++)
+				if (table[i][j] == table[i + k][j - k])
+					count++;
+				else
+					break;
+			if (count >= figToWin)
+				return table[i][j];
+			count = 0;
+		}
 
 	return 0;
 }
@@ -176,16 +207,16 @@ void makeLinePoints() {
 }
 
 void restart() {
-	for (int i = 0; i < 3; i++)
-		for (int j = 0; j < 3; j++) {
+	for (unsigned int i = 0; i < tableSize; i++)
+		for (unsigned int j = 0; j < tableSize; j++) {
 			table[j][i] = 0;
 			linePoints[j][i] = 0;
 		}
 	gameOver = 0;
 	move = 0;
 
-	for (int i = 0; i < 3; i++) //reset cell priorities
-		for (int j = 0; j < 3; j++) {
+	for (unsigned int i = 0; i < tableSize; i++) //reset cell priorities
+		for (unsigned int j = 0; j < tableSize; j++) {
 			if (i - j == 1 || j - i == 1)
 				cellPriority[i][j] = 1;
 			else
@@ -217,8 +248,8 @@ void computerMove() {
 	computerSetPriorities();
 
 	short int moveX, moveY, max = 0;
-	for (int i = 0; i < 3; i++)
-		for (int j = 0; j < 3; j++)
+	for (unsigned int i = 0; i < tableSize; i++)
+		for (unsigned int j = 0; j < tableSize; j++)
 			if (cellPriority[i][j] > max && table[i][j] == 0) {
 				moveX = i;
 				moveY = j;
@@ -241,8 +272,8 @@ void clickCheck(int ind_x, int ind_y) {
 
 void drawFigs() {
 	glLineWidth(5);
-	for (int i = 0; i < 3; i++)
-		for (int j = 0; j < 3; j++) {
+	for (unsigned int i = 0; i < tableSize; i++)
+		for (unsigned int j = 0; j < tableSize; j++) {
 			if (table[i][j] == FIGURE_X)
 				drawX(j * frame_step + border_indent + frame_step / 2,
 					i * frame_step + border_indent + frame_step / 2);
@@ -266,15 +297,15 @@ void RenderScene() {
 		glEnd();
 
 		glBegin(GL_LINES);
-		glVertex2f(border_indent + frame_step, border_indent);
-		glVertex2f(border_indent + frame_step, win_y_size - border_indent);
-		glVertex2f(border_indent + frame_step * 2, border_indent);
-		glVertex2f(border_indent + frame_step * 2, win_y_size - border_indent);
+		for (unsigned int i = 1; i < tableSize + 1; i++) {
+			glVertex2f(border_indent + frame_step * i, border_indent);
+			glVertex2f(border_indent + frame_step * i, win_y_size - border_indent);
+		}
 
-		glVertex2f(border_indent, border_indent + frame_step);
-		glVertex2f(win_x_size - border_indent, border_indent + frame_step);
-		glVertex2f(border_indent, border_indent + frame_step * 2);
-		glVertex2f(win_x_size - border_indent, border_indent + frame_step * 2);
+		for (unsigned int i = 1; i < tableSize + 1; i++) {
+			glVertex2f(border_indent, border_indent + frame_step * i);
+			glVertex2f(win_x_size - border_indent, border_indent + frame_step * i);
+		}
 		glEnd();
 
 		drawFigs();
@@ -374,7 +405,7 @@ void processMainMenu(int option) {
 void update(int value) {
 
 	RenderScene();
-	if ((!gameOver && winCheck() > 0) || (move == 9)) {
+	if ((!gameOver && winCheck() > 0) || (move == tableSize * tableSize)) {
 		makeLinePoints();
 		RenderScene();
 		gameOver = 1;
