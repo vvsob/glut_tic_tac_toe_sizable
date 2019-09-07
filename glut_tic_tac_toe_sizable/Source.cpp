@@ -2,11 +2,12 @@
 #define FIGURE_O 1
 
 #include <cstdlib>
-#include "glut.h"
 #include <cmath>
 
 #include <Windows.h>
 #include <string>
+#include "glut.h"
+#include <iostream>
 
 unsigned int tableSize = 5;
 unsigned int figToWin = 4;
@@ -34,6 +35,11 @@ short int **cellPriority = new short int*[tableSize];
 								  2, 1, 2};*/
 
 bool **linePoints = new bool*[tableSize];
+
+struct point {
+	unsigned int x;
+	unsigned int y;
+};
 
 void init() {
 	for (unsigned int i = 0; i < tableSize; i++)
@@ -119,13 +125,14 @@ void drawLine() {
 	glColor3f(0, 1, 0);
 	glLineWidth(3);
 	glBegin(GL_LINES);
-	for (int i = 0; i < tableSize; i++)
+	for (int i = 0; i < tableSize; i++) {
 		for (int j = 0; j < tableSize; j++) {
 			if (linePoints[i][j]) {
-				glVertex2f(j * frame_step + border_indent + frame_step / 2,
-					i * frame_step + border_indent + frame_step / 2);
+				glVertex2f((j * frame_step) + border_indent + (frame_step / 2), (i * frame_step) + border_indent + (frame_step / 2));
 			}
+			
 		}
+	}
 	glEnd();
 	glColor3f(1, 1, 1);
 	glLineWidth(1);
@@ -138,12 +145,16 @@ short int winCheck() {
 
 	for (unsigned int i = 0; i < tableSize; i++)
 		for (unsigned int j = 0; j < tableSize; j++) {
+			if (table[i][j] == 0)
+				continue;
+
 			//horizontal
 			for (unsigned int k = i; k < tableSize; k++)
 				if (table[i][j] == table[k][j])
 					count++;
-				else
+				else 
 					break;
+					
 			if (count >= figToWin)
 				return table[i][j];
 			count = 0;
@@ -182,8 +193,82 @@ short int winCheck() {
 	return 0;
 }
 
+//Problem here
 void makeLinePoints() {
-	for (int i = 0; i < 3; i++) {
+	unsigned int count = 0;
+
+	for (unsigned int i = 0; i < tableSize; i++)
+		for (unsigned int j = 0; j < tableSize; j++) {
+			if (table[i][j] == 0)
+				continue;
+
+			point lineEnd;
+			lineEnd.x = 0;
+			lineEnd.y = 0;
+
+			unsigned int k;
+			//horizontal
+			for (k = i; k < tableSize; k++)
+				if (table[i][j] == table[k][j]) {
+					lineEnd.x = k;
+					lineEnd.y = j;
+					count++;
+				}
+				else
+					break;
+			if (count >= figToWin) {
+				linePoints[i][j] = 1;
+				linePoints[lineEnd.x][lineEnd.y];
+			}
+			count = 0;
+
+			//vertical
+			for (k = j; k < tableSize; k++)
+				if (table[i][j] == table[i][k]) {
+					lineEnd.x = i;
+					lineEnd.y = k;
+					count++;
+				}
+				else
+					break;
+			if (count >= figToWin) {
+				linePoints[i][j] = 1;
+				linePoints[lineEnd.x][lineEnd.y] = 1;
+			}
+			count = 0;
+
+			//diagonal main
+			for (k = 0; i + k < tableSize && j + k < tableSize; k++)
+				if (table[i][j] == table[i + k][j + k]) {
+					lineEnd.x = i + k;
+					lineEnd.y = j + k;
+					count++;
+				}
+				else
+					break;
+			if (count >= figToWin) {
+				linePoints[i][j] = 1;
+				linePoints[lineEnd.x][lineEnd.y] = 1;
+			}
+			count = 0;
+
+			//diagonal side
+			for (k = 0; i - k < tableSize && j + k < tableSize; k++)
+				if (table[i][j] == table[i - k][j + k]) {
+					lineEnd.x = i - k;
+					lineEnd.y = j + k;
+					count++;
+				}
+				else
+					break;
+			if (count >= figToWin) {
+				linePoints[i][j] = 1;
+				linePoints[lineEnd.x][lineEnd.y] = 1;
+			}
+			count = 0;
+		}
+	
+	/*for (int i = 0; i < 3; i++) {
 		if (table[0][i] == table[1][i] && table[1][i] == table[2][i] && table[0][i] > 0) {
 			linePoints[0][i] = 1;
 			linePoints[2][i] = 1;
@@ -203,6 +288,12 @@ void makeLinePoints() {
 	if (table[0][2] == table[1][1] && table[1][1] == table[2][0] && table[0][2] > 0) {
 		linePoints[0][2] = 1;
 		linePoints[2][0] = 1;
+	}*/
+	for (unsigned int i = 0; i < tableSize; i++) {
+		for (unsigned int j = 0; j < tableSize; j++) {
+			std::cout << linePoints[i][j] << ' ';
+		}
+		std::cout << '\n';
 	}
 }
 
