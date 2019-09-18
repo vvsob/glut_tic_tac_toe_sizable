@@ -9,13 +9,13 @@
 #include <cstdlib>
 #include <cmath>
 
-#include <Windows.h>
+#include <windows.h>
 #include <string>
 
 #include <iostream>
 #include "glut.h"
-unsigned int tableSize = 5;
-unsigned int figToWin = 4;
+unsigned int tableSize = 7;
+unsigned int figToWin = 5;
 
 int win_x_size = 700;
 int win_y_size = 700;
@@ -34,6 +34,7 @@ short int **table = new short int*[tableSize];
 bool computerPlayer = 0;
 
 short int **cellPriority = new short int*[tableSize];
+short int **cellPriorityBonus = new short int*[tableSize];
 
 /*short int cellPriority[3][3] = {2, 1, 2,
 								  1, 3, 1,
@@ -47,11 +48,17 @@ struct point {
 };
 
 void init() {
+	win_x_size -= (win_x_size - border_indent * 2) % tableSize;
+	win_y_size = win_x_size;
+
 	for (unsigned int i = 0; i < tableSize; i++)
 		table[i] = new short int[tableSize];
 
 	for (unsigned int i = 0; i < tableSize; i++)
 		cellPriority[i] = new short int[tableSize];
+
+	for (unsigned int i = 0; i < tableSize; i++)
+		cellPriorityBonus[i] = new short int[tableSize];
 
 	for (unsigned int i = 0; i < tableSize; i++)
 		linePoints[i] = new bool[tableSize];
@@ -146,10 +153,15 @@ void drawLine() {
 
 void directions(int *returnArray, short int i, short int j) {
 	unsigned int count = 0;
-
+	if (table[i][j] == 0)
+	{
+		for (unsigned int k = 0; k < 4; k++)
+			returnArray[k] = 0;
+		return;
+	}
 	//horizontal
-	for (unsigned int k = i; k < tableSize; k++)
-		if (table[i][j] == table[k][j])
+	for (unsigned int k = j; k < tableSize; k++)
+		if (table[i][j] == table[i][k])
 			count++;
 		else
 			break;
@@ -157,8 +169,8 @@ void directions(int *returnArray, short int i, short int j) {
 	count = 0;
 
 	//vertical
-	for (unsigned int k = j; k < tableSize; k++)
-		if (table[i][j] == table[i][k])
+	for (unsigned int k = i; k < tableSize; k++)
+		if (table[i][j] == table[k][j])
 			count++;
 		else
 			break;
@@ -175,8 +187,8 @@ void directions(int *returnArray, short int i, short int j) {
 	count = 0;
 
 	//diagonal side
-	for (unsigned int k = 0; i + k < tableSize && j - k < tableSize; k++)
-		if (table[i][j] == table[i + k][j - k])
+	for (unsigned int k = 0; i - k < tableSize && j + k < tableSize; k++)
+		if (table[i][j] == table[i - k][j + k])
 			count++;
 		else
 			break;
@@ -193,7 +205,7 @@ short int winCheck() {
 			int* winDirections = new int[4];
 			directions(winDirections, i, j);
 			for (int t = 0; t < 4; t++)
-				if (winDirections[t] >= 4)
+				if (winDirections[t] >= figToWin)
 					return table[i][j];
 		}
 
@@ -201,108 +213,43 @@ short int winCheck() {
 }
 
 void makeLinePoints() {
-	unsigned int count = 0;
+	int* pointDirections = new int[4];
 
 	for (unsigned int i = 0; i < tableSize; i++)
 		for (unsigned int j = 0; j < tableSize; j++) {
-			if (table[i][j] == 0)
-				continue;
-
-			point lineEnd;
-			lineEnd.i = 0;
-			lineEnd.j = 0;
-
-			unsigned int k;
+			directions(pointDirections, i, j);
+			//for debug
+			for (unsigned int k = 0; k < 4; k++) {
+				std::cout << pointDirections[k] << ' ';
+			}
+			std::cout << '\n';
 			//horizontal
-			for (k = j; k < tableSize; k++)
-				if (table[i][j] == table[i][k]) {
-					lineEnd.i = i;
-					lineEnd.j = k;
-					count++;
-				}
-				else
-					break;
-			if (count >= figToWin) {
+			if (pointDirections[VECTOR_HORIZONTAL] >= figToWin) {
 				linePoints[i][j] = 1;
-				linePoints[lineEnd.i][lineEnd.j] = 1;
+				linePoints[i][j + pointDirections[VECTOR_HORIZONTAL] - 1] = 1;
+				return;
 			}
-			count = 0;
-
 			//vertical
-			for (k = i; k < tableSize; k++)
-				if (table[i][j] == table[k][j]) {
-					lineEnd.j = j;
-					lineEnd.i = k;
-					count++;
-				}
-				else
-					break;
-			if (count >= figToWin) {
+			if (pointDirections[VECTOR_VERTICAL] >= figToWin) {
 				linePoints[i][j] = 1;
-				linePoints[lineEnd.i][lineEnd.j] = 1;
+				linePoints[i + pointDirections[VECTOR_VERTICAL] - 1][j] = 1;
+				return;
 			}
-			count = 0;
-
-			//diagonal main
-			for (k = 0; i + k < tableSize && j + k < tableSize; k++)
-				if (table[i][j] == table[i + k][j + k]) {
-					lineEnd.i = i + k;
-					lineEnd.j = j + k;
-					count++;
-				}
-				else
-					break;
-			if (count >= figToWin) {
+			//main diagonal
+			if (pointDirections[VECTOR_MAIN_DIAGONAL] >= figToWin) {
 				linePoints[i][j] = 1;
-				linePoints[lineEnd.i][lineEnd.j] = 1;
+				linePoints[i + pointDirections[VECTOR_MAIN_DIAGONAL] - 1][j + pointDirections[VECTOR_MAIN_DIAGONAL] - 1] = 1;
+				return;
 			}
-			count = 0;
-
-			//diagonal side
-			for (k = 0; i - k < tableSize && j + k < tableSize; k++)
-				if (table[i][j] == table[i - k][j + k]) {
-					lineEnd.i = i - k;
-					lineEnd.j = j + k;
-					count++;
-				}
-				else
-					break;
-			if (count >= figToWin) {
+			//side diagonal
+			if (pointDirections[VECTOR_SIDE_DIAGONAL] >= figToWin) {
 				linePoints[i][j] = 1;
-				linePoints[lineEnd.i][lineEnd.j] = 1;
+				linePoints[i - pointDirections[VECTOR_SIDE_DIAGONAL] + 1][j + pointDirections[VECTOR_SIDE_DIAGONAL] - 1] = 1;
+				return;
 			}
-			count = 0;
 		}
-	
-	/*for (int i = 0; i < 3; i++) {
-		if (table[0][i] == table[1][i] && table[1][i] == table[2][i] && table[0][i] > 0) {
-			linePoints[0][i] = 1;
-			linePoints[2][i] = 1;
-		}
-	}
-	for (int i = 0; i < 3; i++) {
-		if (table[i][0] == table[i][1] && table[i][1] == table[i][2] && table[i][0] > 0) {
-			linePoints[i][0] = 1;
-			linePoints[i][2] = 1;
-		}
-	}
 
-	if (table[0][0] == table[1][1] && table[1][1] == table[2][2] && table[0][0] > 0) {
-		linePoints[0][0] = 1;
-		linePoints[2][2] = 1;
-	}
-	if (table[0][2] == table[1][1] && table[1][1] == table[2][0] && table[0][2] > 0) {
-		linePoints[0][2] = 1;
-		linePoints[2][0] = 1;
-	}*/
 
-	//for debug
-	for (unsigned int i = 0; i < tableSize; i++) {
-		for (unsigned int j = 0; j < tableSize; j++) {
-			std::cout << linePoints[i][j] << ' ';
-		}
-		std::cout << '\n';
-	}
 }
 
 void restart() {
@@ -326,19 +273,24 @@ void restart() {
 }
 
 void computerSetPriorities() {
+	int* pointDirections = new int[4];
 	for (unsigned int i = 0; i < tableSize; i++) {
 		for (unsigned int j = 0; j < tableSize; j++) {
-			if (table[i][j] == 0) {
-				table[i][j] = FIGURE_O; //Win move check
-				if (winCheck() > 0)
-					cellPriority[i][j] = 6;
-
-				table[i][j] = FIGURE_X; //Enemy win move check
-				if (winCheck() > 0)
-					cellPriority[i][j] = 5;
-
-				table[i][j] = 0;
-			}
+			if (table[i][j] == 0)
+				continue;
+			directions(pointDirections, i, j);
+			//horizontal
+			cellPriorityBonus[i][j - 1] = pointDirections[VECTOR_HORIZONTAL] * 2 - table[i][j];
+			linePoints[i][j + pointDirections[VECTOR_HORIZONTAL] - 1] = pointDirections[VECTOR_HORIZONTAL] * 2 - table[i][j];
+			//vertical
+			linePoints[i][j] = 1;
+			linePoints[i + pointDirections[VECTOR_VERTICAL] - 1][j] = 1;
+			//main diagonal
+			linePoints[i][j] = 1;
+			linePoints[i + pointDirections[VECTOR_MAIN_DIAGONAL] - 1][j + pointDirections[VECTOR_MAIN_DIAGONAL] - 1] = 1;
+			//side diagonal
+			linePoints[i][j] = 1;
+			linePoints[i - pointDirections[VECTOR_SIDE_DIAGONAL] + 1][j + pointDirections[VECTOR_SIDE_DIAGONAL] - 1] = 1;
 		}
 	}
 }
@@ -507,6 +459,13 @@ void update(int value) {
 	RenderScene();
 	if ((!gameOver && winCheck() > 0) || (move == tableSize * tableSize)) {
 		makeLinePoints();
+		//for debug
+		for (unsigned int i = 0; i < tableSize; i++) {
+			for (unsigned int j = 0; j < tableSize; j++) {
+				std::cout << linePoints[i][j] << ' ';
+			}
+			std::cout << '\n';
+		}
 		RenderScene();
 		gameOver = 1;
 		Sleep(1500);
