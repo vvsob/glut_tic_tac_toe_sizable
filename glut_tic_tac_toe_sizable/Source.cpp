@@ -15,7 +15,8 @@
 
 #include <Windows.h>
 #include <string>
-
+#include <random>
+#include <ctime>
 #include <iostream>
 #include "glut.h"
 unsigned int tableSize = 7;
@@ -32,6 +33,7 @@ short int move = 0;
 bool gameOver = 0;
 bool firstPlayer = 1;
 
+short int difficulty = 2;
 
 short int **table = new short int*[tableSize];
 
@@ -401,6 +403,12 @@ void computerSetPriorities() {
 					cellPrBon[A.i][A.j] = pntDir[k];
 				if (pntDir[k] > cellPrBon[B.i][B.j])
 					cellPrBon[B.i][B.j] = pntDir[k];
+
+				if (difficulty == 1) {
+					cellPrBon[A.i][A.j] += round((rand() % 30 - 15) / 10.0);
+					cellPrBon[B.i][B.j] += round((rand() % 30 - 15) / 10.0);
+				}
+					
 				std::cout << "A[" << A.i << "][" << A.j << "] = " << cellPrBon[A.i][A.j] << '\n';
 				std::cout << "B[" << B.i << "][" << B.j << "] = " << cellPrBon[B.i][B.j] << '\n';
 			}
@@ -557,14 +565,18 @@ void processSecondPlayerMenu(int option) {
 		else
 			return;
 	}
-	switch (option) {
-	case 1:
-		compPlay = 0;
-		break;
-	case 2:
-		compPlay = 1;
-		break;
+	compPlay = 0;
+}
+
+void processDifficultySelector(int option) {
+	if (move > 0) {
+		if (MessageBox(NULL, "Game already has started. Restart game?", "Game started", MB_ICONWARNING | MB_YESNO) == IDYES)
+			restart();
+		else
+			return;
 	}
+	difficulty = option;
+	compPlay = 1;
 }
 
 void processMainMenu(int option) {
@@ -604,6 +616,8 @@ void update(int value) {
 }
 
 int main(int argc, char** argv) {
+	srand(time(0));
+
 	init();
 
 	glutInit(&argc, argv);
@@ -622,6 +636,7 @@ int main(int argc, char** argv) {
 
 	int moveMenu;
 	int secondPlayerMenu;
+	int difficultySelector;
 	int mainMenu;
 
 
@@ -629,9 +644,14 @@ int main(int argc, char** argv) {
 	glutAddMenuEntry("X", 1);
 	glutAddMenuEntry("O", 2);
 
+	difficultySelector = glutCreateMenu(processDifficultySelector);
+	glutAddMenuEntry("Easy difficulty", 1);
+	glutAddMenuEntry("Medium difficulty", 2);
+	glutAddMenuEntry("Hard difficulty", 3);
+
 	secondPlayerMenu = glutCreateMenu(processSecondPlayerMenu);
 	glutAddMenuEntry("Play with human", 1);
-	glutAddMenuEntry("Play with Computer", 2);
+	glutAddSubMenu("Play with Computer", difficultySelector);
 
 	mainMenu = glutCreateMenu(processMainMenu);
 	glutAddSubMenu("Who moves first", moveMenu);
