@@ -86,8 +86,8 @@ void init() {
 }
 
 void logBotPriority() {
-	for (int i = 0; i < tableSize; i++) {
-		for (int j = 0; j < tableSize; j++)
+	for (unsigned int i = 0; i < tableSize; i++) {
+		for (unsigned int j = 0; j < tableSize; j++)
 			std::cout << cellPrBon[i][j] << ' ';
 		std::cout << '\n';
 	}
@@ -253,7 +253,8 @@ point incrVectInd(int direction, int i, int j) {
 	return pnt;
 }
 
-void directions(int *returnArray, short int i, short int j) {
+template<typename T>
+void directions(T *returnArray, short int i, short int j) {
 	unsigned int count = 0;
 	if (table[i][j] == 0)
 	{
@@ -304,7 +305,7 @@ short int winCheck() {
 		for (unsigned int j = 0; j < tableSize; j++) {
 			if (table[i][j] == 0)
 				continue;
-			int* winDirections = new int[4];
+			unsigned int* winDirections = new unsigned int[4];
 			directions(winDirections, i, j);
 			for (int t = 0; t < 4; t++)
 				if (winDirections[t] >= figToWin)
@@ -315,7 +316,7 @@ short int winCheck() {
 }
 
 void makelinePnt() {
-	int* pntDir = new int[4];
+	unsigned int* pntDir = new unsigned int[4];
 
 	for (unsigned int i = 0; i < tableSize; i++)
 		for (unsigned int j = 0; j < tableSize; j++) {
@@ -359,6 +360,7 @@ void restart() {
 		for (unsigned int j = 0; j < tableSize; j++) {
 			table[j][i] = 0;
 			linePnt[j][i] = 0;
+			cellPrBon[i][j] = 0;
 		}
 	gameOver = 0;
 	move = 0;
@@ -387,14 +389,20 @@ void computerSetPriorities() {
 			directions(pntDir, i, j);
 			for (int k = 0; k < 4; k++) 
 			{
-				if (incrVectInd(k + 4, A).i )
-					A = incrVectInd(k + 4, A);
+				A.i = i;
+				A.j = j;
+				B = A;
+				A = incrVectInd(k + 4, A);
 				for (int t = 0; t < pntDir[k]; t++)
 					B = incrVectInd(k, B);
 				A = corrPnt(A);
 				B = corrPnt(B);
-				cellPrBon[A.i][A.j] = pntDir[k];
-				cellPrBon[B.i][B.j] = pntDir[k];
+				if (pntDir[k] > cellPrBon[A.i][A.j])
+					cellPrBon[A.i][A.j] = pntDir[k];
+				if (pntDir[k] > cellPrBon[B.i][B.j])
+					cellPrBon[B.i][B.j] = pntDir[k];
+				std::cout << "A[" << A.i << "][" << A.j << "] = " << cellPrBon[A.i][A.j] << '\n';
+				std::cout << "B[" << B.i << "][" << B.j << "] = " << cellPrBon[B.i][B.j] << '\n';
 			}
 
 		}
@@ -414,7 +422,7 @@ void computerMove() {
 			}
 	table[moveX][moveY] = FIGURE_O; //computer is always O
 
-	computerSetPriorities();
+	//computerSetPriorities();
 
 	logBotPriority();
 }
