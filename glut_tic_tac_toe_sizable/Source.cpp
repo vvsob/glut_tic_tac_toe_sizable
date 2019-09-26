@@ -19,11 +19,11 @@
 #include <ctime>
 #include <iostream>
 #include "glut.h"
-unsigned int tableSize = 7;
+unsigned int tableSize = 15;
 unsigned int figToWin = 5;
 
-int win_x_size = 700;
-int win_y_size = 700;
+int win_x_size = 900;
+int win_y_size = 900;
 
 int border_indent = 50;
 
@@ -49,8 +49,8 @@ short int **cellPrBon = new short int*[tableSize];
 bool **linePnt = new bool*[tableSize];
 
 struct point {
-	unsigned int i;
-	unsigned int j;
+	int i;
+	int j;
 };
 
 void init() {
@@ -165,7 +165,7 @@ void drawLine() {
 	glColor3f(1, 1, 1);
 	glLineWidth(1);
 
-}
+} 
 
 point corrPnt(point pnt) {
 	if (pnt.i < 0)
@@ -174,10 +174,10 @@ point corrPnt(point pnt) {
 	if (pnt.j < 0)
 		pnt.j = 0;
 	
-	if (pnt.i >= tableSize)
+	if (unsigned(pnt.i) >= tableSize)
 		pnt.i = tableSize - 1;
 
-	if (pnt.j >= tableSize - 1)
+	if (unsigned(pnt.j) >= tableSize - 1)
 		pnt.j = tableSize - 1;
 	return pnt;
 }
@@ -379,6 +379,11 @@ void restart() {
 }
 
 void computerSetPriorities() {
+
+	for (unsigned int i = 0; i < tableSize; i++)
+		for (unsigned int j = 0; j < tableSize; j++)
+			cellPrBon[i][j] = 0;
+
 	int* pntDir = new int[4];
 	for (unsigned int i = 0; i < tableSize; i++) {
 		for (unsigned int j = 0; j < tableSize; j++) {
@@ -399,16 +404,36 @@ void computerSetPriorities() {
 					B = incrVectInd(k, B);
 				A = corrPnt(A);
 				B = corrPnt(B);
+
+
+				//set priorities
 				if (pntDir[k] > cellPrBon[A.i][A.j])
 					cellPrBon[A.i][A.j] = pntDir[k];
 				if (pntDir[k] > cellPrBon[B.i][B.j])
 					cellPrBon[B.i][B.j] = pntDir[k];
+				//hard bot
+				if (difficulty == 3 && table[B.i][B.j] == 0 && table[A.i][A.j] != table[i][j])
+				{
+					point C = incrVectInd(k, B);
+					C = corrPnt(C);
+					if (table[C.i][C.j] == table[i][j]) {
+						int *tempDir = new int[4];
+						directions(tempDir, C.i, C.j);
+						cellPrBon[B.i][B.j] += tempDir[k];
+					}
+					point p = B;
+					for (int t = pntDir[k]; t < figToWin; t++)
+						p = incrVectInd(k, p);
+					//TODO
+				}
 
+				//add random numbers if easy difficulty
 				if (difficulty == 1) {
 					cellPrBon[A.i][A.j] += round((rand() % 30 - 15) / 10.0);
 					cellPrBon[B.i][B.j] += round((rand() % 30 - 15) / 10.0);
 				}
-					
+
+				//log points
 				std::cout << "A[" << A.i << "][" << A.j << "] = " << cellPrBon[A.i][A.j] << '\n';
 				std::cout << "B[" << B.i << "][" << B.j << "] = " << cellPrBon[B.i][B.j] << '\n';
 			}
@@ -418,15 +443,20 @@ void computerSetPriorities() {
 }
 
 void computerMove() { 
+	if (move == 0) {
+		table[tableSize / 2][tableSize / 2] = FIGURE_O;
+		return;
+	}
+
 	computerSetPriorities();
 
 	short int moveX = 0, moveY = 0, max = 0;
 	for (unsigned int i = 0; i < tableSize; i++)
 		for (unsigned int j = 0; j < tableSize; j++)
-			if (cellPr[i][j] + cellPrBon[i][j] > max && table[i][j] == 0) {
+			if (cellPrBon[i][j] > max && table[i][j] == 0) {
 				moveX = i;
 				moveY = j;
-				max = cellPr[i][j] + cellPrBon[i][j];
+				max = cellPrBon[i][j];
 			}
 	table[moveX][moveY] = FIGURE_O; //computer is always O
 
@@ -541,13 +571,17 @@ void MouseClick(int button, int state, int width, int height) {
 		clickCheck(ind_x, ind_y);
 }
 
-void processMoveMenu(int option) {
+void restartWarning() {
 	if (move > 0) {
 		if (MessageBox(NULL, "Game already has started. Restart game?", "Game started", MB_ICONWARNING | MB_YESNO) == IDYES)
 			restart();
 		else
 			return;
 	}
+}
+
+void processMoveMenu(int option) {
+	restartWarning();
 	switch (option) {
 		case 1:
 			firstPlayer = FIGURE_X - 1;
@@ -559,22 +593,12 @@ void processMoveMenu(int option) {
 }
 
 void processSecondPlayerMenu(int option) {
-	if (move > 0) {
-		if (MessageBox(NULL, "Game already has started. Restart game?", "Game started", MB_ICONWARNING | MB_YESNO) == IDYES)
-			restart();
-		else
-			return;
-	}
+	restartWarning();
 	compPlay = 0;
 }
 
 void processDifficultySelector(int option) {
-	if (move > 0) {
-		if (MessageBox(NULL, "Game already has started. Restart game?", "Game started", MB_ICONWARNING | MB_YESNO) == IDYES)
-			restart();
-		else
-			return;
-	}
+	restartWarning();
 	difficulty = option;
 	compPlay = 1;
 }
@@ -597,7 +621,7 @@ void update(int value) {
 		}
 		RenderScene();
 		gameOver = 1;
-		Sleep(1500);
+		Sleep(5000);
 
 		RenderScene();
 
