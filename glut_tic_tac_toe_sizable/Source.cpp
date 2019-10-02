@@ -22,8 +22,8 @@
 unsigned int tableSize = 15;
 unsigned int figToWin = 5;
 
-int win_x_size = 900;
-int win_y_size = 900;
+int win_x_size = 800;
+int win_y_size = 800;
 
 int border_indent = 50;
 
@@ -414,6 +414,27 @@ void computerSetPriorities() {
 				//hard bot
 				if (difficulty == 3 && table[B.i][B.j] == 0 && table[A.i][A.j] != table[i][j])
 				{
+					point pB = B;
+					for (int t = pntDir[k]; t < figToWin - 1; t++) {
+						pB = incrVectInd(k, pB);
+						if (pB.i >= int(tableSize) ||
+							pB.j >= int(tableSize) ||
+							pB.i < 0 ||
+							pB.j < 0) {
+							cellPrBon[B.i][B.j] = 0;
+							break;
+						}
+
+						if (table[pB.i][pB.j] != 0 && table[pB.i][pB.j] != table[i][j]) {
+							cellPrBon[B.i][B.j] = 0;
+							break;
+						}
+						//increment border points
+						//while can
+						//if can't
+						//then compare iterator to figtowin
+					}
+
 					point C = incrVectInd(k, B);
 					C = corrPnt(C);
 					if (table[C.i][C.j] == table[i][j]) {
@@ -421,9 +442,7 @@ void computerSetPriorities() {
 						directions(tempDir, C.i, C.j);
 						cellPrBon[B.i][B.j] += tempDir[k];
 					}
-					point p = B;
-					for (int t = pntDir[k]; t < figToWin; t++)
-						p = incrVectInd(k, p);
+
 					//TODO
 				}
 
