@@ -411,28 +411,39 @@ void computerSetPriorities() {
 					cellPrBon[A.i][A.j] = pntDir[k];
 				if (pntDir[k] > cellPrBon[B.i][B.j])
 					cellPrBon[B.i][B.j] = pntDir[k];
+
+				//set max priority if there is a chance to win
+				if (pntDir[k] == figToWin - 1) {
+					cellPrBon[A.i][A.j] = figToWin + table[i][j];
+					cellPrBon[B.i][B.j] = figToWin + table[i][j];
+				}
+
 				//hard bot
 				if (difficulty == 3 && table[B.i][B.j] == 0 && table[A.i][A.j] != table[i][j])
 				{
+					point pA = A;
 					point pB = B;
 					for (int t = pntDir[k]; t < figToWin - 1; t++) {
+						pA = incrVectInd(k + 4, pA);
 						pB = incrVectInd(k, pB);
+						
+						if (pA.i >= int(tableSize) ||
+							pA.j >= int(tableSize) ||
+							pA.i < 0 ||
+							pA.j < 0) {
+							cellPrBon[A.i][A.j] = 0;
+						}
+						else if (table[pA.i][pA.j] != 0 && table[pA.i][pA.j] != table[i][j])
+							cellPrBon[A.i][A.j] = 0;
+
 						if (pB.i >= int(tableSize) ||
 							pB.j >= int(tableSize) ||
 							pB.i < 0 ||
 							pB.j < 0) {
 							cellPrBon[B.i][B.j] = 0;
-							break;
 						}
-
-						if (table[pB.i][pB.j] != 0 && table[pB.i][pB.j] != table[i][j]) {
+						else if (table[pB.i][pB.j] != 0 && table[pB.i][pB.j] != table[i][j])
 							cellPrBon[B.i][B.j] = 0;
-							break;
-						}
-						//increment border points
-						//while can
-						//if can't
-						//then compare iterator to figtowin
 					}
 
 					point C = incrVectInd(k, B);
@@ -442,8 +453,6 @@ void computerSetPriorities() {
 						directions(tempDir, C.i, C.j);
 						cellPrBon[B.i][B.j] += tempDir[k];
 					}
-
-					//TODO
 				}
 
 				//add random numbers if easy difficulty
