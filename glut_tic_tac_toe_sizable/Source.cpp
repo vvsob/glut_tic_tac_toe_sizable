@@ -18,7 +18,9 @@
 #include <random>
 #include <ctime>
 #include <iostream>
+#include <fstream>
 #include "glut.h"
+
 unsigned int tableSize = 15;
 unsigned int figToWin = 5;
 
@@ -35,18 +37,14 @@ bool firstPlayer = 1;
 
 short int difficulty = 2;
 
-short int **table = new short int*[tableSize];
+short int **table;
 
 bool compPlay = 0;
 
-short int **cellPr = new short int*[tableSize];
-short int **cellPrBon = new short int*[tableSize];
+//short int **cellPr = new short int*[tableSize];
+short int **cellPrBon;
 
-/*short int cellPr[3][3] = {2, 1, 2,
-								  1, 3, 1,
-								  2, 1, 2};*/
-
-bool **linePnt = new bool*[tableSize];
+bool **linePnt;
 
 struct point {
 	int i;
@@ -54,14 +52,20 @@ struct point {
 };
 
 void init() {
+	table = new short int* [tableSize];
+	cellPrBon = new short int* [tableSize];
+	linePnt = new bool* [tableSize];
+
+	frame_step = (win_x_size - border_indent * 2) / tableSize;
+
 	win_x_size -= (win_x_size - border_indent * 2) % tableSize;
 	win_y_size = win_x_size;
 
 	for (unsigned int i = 0; i < tableSize; i++)
 		table[i] = new short int[tableSize];
 
-	for (unsigned int i = 0; i < tableSize; i++)
-		cellPr[i] = new short int[tableSize];
+	//for (unsigned int i = 0; i < tableSize; i++)
+	//	cellPr[i] = new short int[tableSize];
 
 	for (unsigned int i = 0; i < tableSize; i++)
 		cellPrBon[i] = new short int[tableSize];
@@ -75,7 +79,7 @@ void init() {
 			linePnt[i][j] = 0;
 			cellPrBon[i][j] = 0;
 		}
-
+	/*
 	for (unsigned int i = 0; i < tableSize; i++) //set cell priorities
 		for (unsigned int j = 0; j < tableSize; j++) {
 			if (i == 0 || j == 0 || i == tableSize - 1 || j == tableSize - 1) {
@@ -84,7 +88,43 @@ void init() {
 					cellPr[i][j] = 2;
 			} else
 				cellPr[i][j] = 3;
-		}
+		}*/
+}
+
+void runSettings() {
+	TCHAR buffer[MAX_PATH];
+	GetCurrentDirectory(sizeof(buffer), buffer);
+	std::string filepath = "\\Setting_tic_toc.exe"; //В релизе путь БЕЗ \\Debug !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	filepath = buffer + filepath;
+
+	STARTUPINFO cif;
+	ZeroMemory(&cif, sizeof(STARTUPINFO));
+	PROCESS_INFORMATION pi;
+	CreateProcess(filepath.c_str(), NULL, NULL, NULL, FALSE, NULL, NULL, NULL, &cif, &pi);
+	std::cout << "handle " << pi.hProcess << std::endl;
+	WaitForSingleObject(pi.hProcess, INFINITE);
+	CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
+
+	char buff[50];
+	std::ifstream fin("buf.txt");
+	if (!fin.is_open())
+		std::cout << "Failed to open file!\n";
+	else
+	{
+		fin >> buff;
+		std::cout << "Table size " << buff << std::endl;
+		tableSize = atoi(buff);
+		fin >> buff;
+		std::cout << "Fig to win " << buff << std::endl;
+		figToWin = atoi(buff);
+
+		init();
+
+		fin.close();
+	}
+
+
 }
 
 void logBotPriority() {
@@ -367,7 +407,7 @@ void restart() {
 	gameOver = 0;
 	move = 0;
 
-	for (unsigned int i = 0; i < tableSize; i++) //reset cell priorities
+	/*for (unsigned int i = 0; i < tableSize; i++) //reset cell priorities
 		for (unsigned int j = 0; j < tableSize; j++) {
 			if (i - j == 1 || j - i == 1)
 				cellPr[i][j] = 1;
@@ -375,7 +415,7 @@ void restart() {
 				cellPr[i][j] = 2;
 			if (i == 1 && j == 1)
 				cellPr[i][j] = 3;
-		}
+		}*/
 }
 
 void computerSetPriorities() {
@@ -599,17 +639,21 @@ void MouseClick(int button, int state, int width, int height) {
 		clickCheck(ind_x, ind_y);
 }
 
-void restartWarning() {
+bool restartWarning() {
 	if (move > 0) {
-		if (MessageBox(NULL, "Game already has started. Restart game?", "Game started", MB_ICONWARNING | MB_YESNO) == IDYES)
+		if (MessageBox(NULL, "Game already has started. Restart game?", "Game started", MB_ICONWARNING | MB_YESNO) == IDYES) {
 			restart();
+			return 1;
+		}
 		else
-			return;
+			return 0;
 	}
+	return 1;
 }
 
 void processMoveMenu(int option) {
-	restartWarning();
+	if (!restartWarning())
+		return;
 	switch (option) {
 		case 1:
 			firstPlayer = FIGURE_X - 1;
@@ -621,18 +665,28 @@ void processMoveMenu(int option) {
 }
 
 void processSecondPlayerMenu(int option) {
-	restartWarning();
+	if (!restartWarning())
+		return;
 	compPlay = 0;
 }
 
 void processDifficultySelector(int option) {
-	restartWarning();
+	if (!restartWarning())
+		return;
 	difficulty = option;
 	compPlay = 1;
 }
 
 void processMainMenu(int option) {
-	restart();
+	switch (option) {
+	case 1:
+		restart();
+		break;
+	case 2:
+		if (!restartWarning())
+			return;
+		runSettings();
+	}
 }
 
 void update(int value) {
@@ -670,7 +724,9 @@ void update(int value) {
 int main(int argc, char** argv) {
 	srand(time(0));
 
-	init();
+	runSettings();
+
+	//init();
 
 	glutInit(&argc, argv);
 	glutInitWindowPosition(100, 100);
@@ -709,6 +765,7 @@ int main(int argc, char** argv) {
 	glutAddSubMenu("Who moves first", moveMenu);
 	glutAddSubMenu("Second Player", secondPlayerMenu);
 	glutAddMenuEntry("Restart", 1);
+	glutAddMenuEntry("Run settings", 2);
 
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
 
