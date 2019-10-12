@@ -35,11 +35,11 @@ short int move = 0;
 bool gameOver = 0;
 bool firstPlayer = 1;
 
-short int difficulty = 2;
+short int difficulty = 3;
 
 short int **table;
 
-bool compPlay = 0;
+bool compPlay = 1;
 
 //short int **cellPr = new short int*[tableSize];
 short int **cellPrBon;
@@ -94,7 +94,7 @@ void init() {
 void runSettings() {
 	TCHAR buffer[MAX_PATH];
 	GetCurrentDirectory(sizeof(buffer), buffer);
-	std::string filepath = "\\Setting_tic_toc.exe"; //В релизе путь БЕЗ \\Debug !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	std::string filepath = "\\Setting_tic_toc.exe";
 	filepath = buffer + filepath;
 
 	STARTUPINFO cif;
@@ -137,10 +137,8 @@ void logBotPriority() {
 }
 
 void changeSize(int w, int h) {
-	// предупредим деление на ноль
-	// если окно сильно перетянуто будет
-	win_x_size = w;
-	win_y_size = h;
+	w = win_x_size;
+	h = win_y_size;
 
 	if (h == 0)
 		h = 1;
@@ -452,40 +450,49 @@ void computerSetPriorities() {
 				if (pntDir[k] > cellPrBon[B.i][B.j])
 					cellPrBon[B.i][B.j] = pntDir[k];
 
-				//set max priority if there is a chance to win
-				if (pntDir[k] == figToWin - 1) {
-					cellPrBon[A.i][A.j] = figToWin + table[i][j];
-					cellPrBon[B.i][B.j] = figToWin + table[i][j];
-				}
-
 				//hard bot
-				if (difficulty == 3 && table[B.i][B.j] == 0 && table[A.i][A.j] != table[i][j])
+				if (difficulty == 3 /*&& table[B.i][B.j] == 0 && table[A.i][A.j] != table[i][j]*/)
 				{
-					point pA = A;
-					point pB = B;
-					for (int t = pntDir[k]; t < figToWin - 1; t++) {
-						pA = incrVectInd(k + 4, pA);
-						pB = incrVectInd(k, pB);
-						
-						if (pA.i >= int(tableSize) ||
-							pA.j >= int(tableSize) ||
-							pA.i < 0 ||
-							pA.j < 0) {
-							cellPrBon[A.i][A.j] = 0;
-						}
-						else if (table[pA.i][pA.j] != 0 && table[pA.i][pA.j] != table[i][j])
-							cellPrBon[A.i][A.j] = 0;
+					//border check
+					if (tableSize != figToWin) {
+						point pA = A;
+						point pB = B;
+						for (int t = pntDir[k]; t < figToWin - 1; t++) {
+							pA = incrVectInd(k + 4, pA);
+							pB = incrVectInd(k, pB);
 
-						if (pB.i >= int(tableSize) ||
-							pB.j >= int(tableSize) ||
-							pB.i < 0 ||
-							pB.j < 0) {
-							cellPrBon[B.i][B.j] = 0;
+							if (pA.i >= int(tableSize) ||
+								pA.j >= int(tableSize) ||
+								pA.i < 0 ||
+								pA.j < 0) {
+								cellPrBon[A.i][A.j] = 0;
+							}
+							else if (table[pA.i][pA.j] != 0 && table[pA.i][pA.j] != table[i][j])
+								cellPrBon[A.i][A.j] = 0;
+
+							if (pB.i >= int(tableSize) ||
+								pB.j >= int(tableSize) ||
+								pB.i < 0 ||
+								pB.j < 0) {
+								cellPrBon[B.i][B.j] = 0;
+							}
+							else if (table[pB.i][pB.j] != 0 && table[pB.i][pB.j] != table[i][j])
+								cellPrBon[B.i][B.j] = 0;
 						}
-						else if (table[pB.i][pB.j] != 0 && table[pB.i][pB.j] != table[i][j])
-							cellPrBon[B.i][B.j] = 0;
 					}
-
+					else if (move <= 1) {
+						if ((A.i == 0 && A.j == 0) ||
+							(A.i == 0 && A.j == tableSize - 1) ||
+							(A.i == tableSize - 1 && A.j == 0) ||
+							(A.i == tableSize - 1 && A.j == tableSize - 1))
+							cellPrBon[A.i][A.j]++;
+						if ((B.i == 0 && B.j == 0) ||
+							(B.i == 0 && B.j == tableSize - 1) ||
+							(B.i == tableSize - 1 && B.j == 0) ||
+							(B.i == tableSize - 1 && B.j == tableSize - 1))
+							cellPrBon[B.i][B.j]++;
+					}
+					
 					point C = incrVectInd(k, B);
 					C = corrPnt(C);
 					if (table[C.i][C.j] == table[i][j]) {
@@ -501,6 +508,14 @@ void computerSetPriorities() {
 					cellPrBon[B.i][B.j] += round((rand() % 30 - 15) / 10.0);
 				}
 
+				//set max priority if there is a chance to win
+				if (pntDir[k] == figToWin - 1) {
+					cellPrBon[A.i][A.j] += figToWin + table[i][j];
+					cellPrBon[B.i][B.j] += figToWin + table[i][j];
+				}
+
+				//near border doesnt set max priority
+
 				//log points
 				std::cout << "A[" << A.i << "][" << A.j << "] = " << cellPrBon[A.i][A.j] << '\n';
 				std::cout << "B[" << B.i << "][" << B.j << "] = " << cellPrBon[B.i][B.j] << '\n';
@@ -511,14 +526,14 @@ void computerSetPriorities() {
 }
 
 void computerMove() { 
-	if (move == 0) {
+	if (move == 0 && tableSize != 3) {
 		table[tableSize / 2][tableSize / 2] = FIGURE_O;
 		return;
 	}
 
 	computerSetPriorities();
 
-	short int moveX = 0, moveY = 0, max = 0;
+	short int moveX = 0, moveY = 0, max = -1;
 	for (unsigned int i = 0; i < tableSize; i++)
 		for (unsigned int j = 0; j < tableSize; j++)
 			if (cellPrBon[i][j] > max && table[i][j] == 0) {
