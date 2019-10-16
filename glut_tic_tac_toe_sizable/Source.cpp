@@ -416,11 +416,33 @@ void restart() {
 		}*/
 }
 
+/*---Computer set priorities steps---*/
+
+//1st -- Add priority according to number of figures in a row
+void PrAddFigInRow(point Now,point A, point B, int k, int* pntDir) {
+	
+	if (pntDir[k] > cellPrBon[A.i][A.j]) {
+		cellPrBon[A.i][A.j] += 2 * (pntDir[k] - 1);
+		if (cellPrBon[A.i][A.j] == cellPrBon[Now.i][Now.j])
+			cellPrBon[A.i][A.j]++;
+	}
+	
+	if (pntDir[k] > cellPrBon[B.i][B.j]) {
+		cellPrBon[B.i][B.j] += 2 * (pntDir[k] - 1);
+		if (cellPrBon[B.i][B.j] == cellPrBon[Now.i][Now.j])
+			cellPrBon[B.i][B.j]++;
+	}	
+}
+
+//2nd -- 
+
 void computerSetPriorities() {
 
 	for (unsigned int i = 0; i < tableSize; i++)
 		for (unsigned int j = 0; j < tableSize; j++)
 			cellPrBon[i][j] = 0;
+	
+	point Now;
 
 	int* pntDir = new int[4];
 	for (unsigned int i = 0; i < tableSize; i++) {
@@ -445,10 +467,9 @@ void computerSetPriorities() {
 
 
 				//set priorities
-				if (pntDir[k] > cellPrBon[A.i][A.j])
-					cellPrBon[A.i][A.j] = pntDir[k];
-				if (pntDir[k] > cellPrBon[B.i][B.j])
-					cellPrBon[B.i][B.j] = pntDir[k];
+				if (table[A.i][A.j] != table[i][j] || (A.i == i && A.j == j))
+					//PrAddFigInRow()
+
 
 				//hard bot
 				if (difficulty == 3 /*&& table[B.i][B.j] == 0 && table[A.i][A.j] != table[i][j]*/)
