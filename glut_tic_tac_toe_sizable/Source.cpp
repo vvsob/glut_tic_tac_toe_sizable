@@ -35,7 +35,7 @@ short int move = 0;
 bool gameOver = 0;
 bool firstPlayer = 1;
 
-short int difficulty = 3;
+short int difficulty = 2;
 
 short int **table;
 
@@ -338,6 +338,51 @@ void directions(T *returnArray, short int i, short int j) {
 	returnArray[VECT_SIDE_DIAG] = count;
 }
 
+template<typename T>
+void directions(T* returnArray, point P) {
+	unsigned int count = 0;
+	if (table[P.i][P.j] == 0)
+	{
+		for (unsigned int k = 0; k < 4; k++)
+			returnArray[k] = 0;
+		return;
+	}
+	//horizontal
+	for (unsigned int k = P.j; k < tableSize; k++)
+		if (table[P.i][P.j] == table[P.i][k])
+			count++;
+		else
+			break;
+	returnArray[VECT_HOR] = count;
+	count = 0;
+
+	//VERT
+	for (unsigned int k = P.i; k < tableSize; k++)
+		if (table[P.i][P.j] == table[k][P.j])
+			count++;
+		else
+			break;
+	returnArray[VECT_VERT] = count;
+	count = 0;
+
+	//DIAG main
+	for (unsigned int k = 0; P.i + k < tableSize && P.j + k < tableSize; k++)
+		if (table[P.i][P.j] == table[P.i + k][P.j + k])
+			count++;
+		else
+			break;
+	returnArray[VECT_MAIN_DIAG] = count;
+	count = 0;
+
+	//DIAG side
+	for (unsigned int k = 0; P.i - k < tableSize && P.j + k < tableSize; k++)
+		if (table[P.i][P.j] == table[P.i - k][P.j + k])
+			count++;
+		else
+			break;
+	returnArray[VECT_SIDE_DIAG] = count;
+}
+
 short int winCheck() {
 	unsigned int count = 0;
 
@@ -421,20 +466,24 @@ void restart() {
 //1st -- Add priority according to number of figures in a row
 void PrAddFigInRow(point Now,point A, point B, int k, int* pntDir) {
 	
-	if (pntDir[k] > cellPrBon[A.i][A.j]) {
-		cellPrBon[A.i][A.j] += 2 * (pntDir[k] - 1);
-		if (cellPrBon[A.i][A.j] == cellPrBon[Now.i][Now.j])
-			cellPrBon[A.i][A.j]++;
-	}
+	cellPrBon[A.i][A.j] += 2 * pntDir[k] - 1;
+	if (table[Now.i][Now.j] == FIGURE_O)
+		cellPrBon[A.i][A.j]++;
 	
-	if (pntDir[k] > cellPrBon[B.i][B.j]) {
-		cellPrBon[B.i][B.j] += 2 * (pntDir[k] - 1);
-		if (cellPrBon[B.i][B.j] == cellPrBon[Now.i][Now.j])
-			cellPrBon[B.i][B.j]++;
-	}	
+	cellPrBon[B.i][B.j] += 2 * pntDir[k] - 1;
+	if (table[Now.i][Now.j] == FIGURE_O)
+		cellPrBon[B.i][B.j]++;
+		
 }
 
-//2nd -- 
+//2nd -- Add priority in empty interval between equal figures
+void AddPrInInterv(point Now, int k){
+	point A = incrVectInd(k, Now);
+	point B = incrVectInd(k + 4, Now);
+
+	cellPrBon[Now.i][Now.j] += 2;
+
+}
 
 void computerSetPriorities() {
 
@@ -445,19 +494,20 @@ void computerSetPriorities() {
 	point Now;
 
 	int* pntDir = new int[4];
-	for (unsigned int i = 0; i < tableSize; i++) {
-		for (unsigned int j = 0; j < tableSize; j++) {
-			if (table[i][j] == 0)
+	for (Now.i = 0; Now.i < tableSize; Now.i++) {
+		for (Now.j = 0; Now.j < tableSize; Now.j++) {
+			if (table[Now.i][Now.j] == 0)
 				continue;
+
 			point A, B;
-			A.i = i;
-			A.j = j;
+			A.i = Now.i;
+			A.j = Now.j;
 			B = A;
-			directions(pntDir, i, j);
+			directions(pntDir, Now);
 			for (int k = 0; k < 4; k++) 
 			{
-				A.i = i;
-				A.j = j;
+				A.i = Now.i;
+				A.j = Now.j;
 				B = A;
 				A = incrVectInd(k + 4, A);
 				for (int t = 0; t < pntDir[k]; t++)
@@ -467,12 +517,12 @@ void computerSetPriorities() {
 
 
 				//set priorities
-				if (table[A.i][A.j] != table[i][j] || (A.i == i && A.j == j))
-					//PrAddFigInRow()
+				if (table[A.i][A.j] != table[Now.i][Now.j] || (A.i == Now.i && A.j == Now.j))
+					PrAddFigInRow(Now, A, B, k, pntDir);
 
 
 				//hard bot
-				if (difficulty == 3 /*&& table[B.i][B.j] == 0 && table[A.i][A.j] != table[i][j]*/)
+				if (difficulty == 3 /*&& table[B.i][B.j] == 0 && table[A.i][A.j] != table[Now.i][Now.j]*/)
 				{
 					//border check
 					if (tableSize != figToWin) {
@@ -488,7 +538,7 @@ void computerSetPriorities() {
 								pA.j < 0) {
 								cellPrBon[A.i][A.j] = 0;
 							}
-							else if (table[pA.i][pA.j] != 0 && table[pA.i][pA.j] != table[i][j])
+							else if (table[pA.i][pA.j] != 0 && table[pA.i][pA.j] != table[Now.i][Now.j])
 								cellPrBon[A.i][A.j] = 0;
 
 							if (pB.i >= int(tableSize) ||
@@ -497,7 +547,7 @@ void computerSetPriorities() {
 								pB.j < 0) {
 								cellPrBon[B.i][B.j] = 0;
 							}
-							else if (table[pB.i][pB.j] != 0 && table[pB.i][pB.j] != table[i][j])
+							else if (table[pB.i][pB.j] != 0 && table[pB.i][pB.j] != table[Now.i][Now.j])
 								cellPrBon[B.i][B.j] = 0;
 						}
 					}
@@ -516,9 +566,9 @@ void computerSetPriorities() {
 					
 					point C = incrVectInd(k, B);
 					C = corrPnt(C);
-					if (table[C.i][C.j] == table[i][j]) {
+					if (table[C.i][C.j] == table[Now.i][Now.j]) {
 						int *tempDir = new int[4];
-						directions(tempDir, C.i, C.j);
+						directions(tempDir, C);
 						cellPrBon[B.i][B.j] += tempDir[k];
 					}
 				}
@@ -531,15 +581,15 @@ void computerSetPriorities() {
 
 				//set max priority if there is a chance to win
 				if (pntDir[k] == figToWin - 1) {
-					cellPrBon[A.i][A.j] += figToWin + table[i][j];
-					cellPrBon[B.i][B.j] += figToWin + table[i][j];
+					cellPrBon[A.i][A.j] += figToWin + table[Now.i][Now.j];
+					cellPrBon[B.i][B.j] += figToWin + table[Now.i][Now.j];
 				}
 
 				//near border doesnt set max priority
 
 				//log points
-				std::cout << "A[" << A.i << "][" << A.j << "] = " << cellPrBon[A.i][A.j] << '\n';
-				std::cout << "B[" << B.i << "][" << B.j << "] = " << cellPrBon[B.i][B.j] << '\n';
+				//std::cout << "A[" << A.i << "][" << A.j << "] = " << cellPrBon[A.i][A.j] << '\n';
+				//std::cout << "B[" << B.i << "][" << B.j << "] = " << cellPrBon[B.i][B.j] << '\n';
 			}
 
 		}
@@ -634,7 +684,7 @@ void RenderScene() {
 			sprintf_s(c, 10, "O's %s", winMsg);
 		else if (winCheck() == FIGURE_X && compPlay)
 			sprintf_s(c, 10, "YOU %s", winMsg);
-		else //if (winCheck() == FIGURE_O && compPlay)
+		else if (winCheck() == FIGURE_O && compPlay)
 			sprintf_s(c, 10, "BOT %s", winMsg);
 
 		int x1 = win_x_size / 2 - glutBitmapWidth(GLUT_BITMAP_TIMES_ROMAN_24, '0') * 5;
