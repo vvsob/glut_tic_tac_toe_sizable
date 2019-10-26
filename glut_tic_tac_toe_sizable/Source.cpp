@@ -311,6 +311,15 @@ point incrVectInd(int direction, int i, int j) {
 	return pnt;
 }
 
+bool pOutside(point P) {
+	if (P.i >= int(tableSize) ||
+		P.j >= int(tableSize) ||
+		P.i < 0 ||
+		P.j < 0)
+		return 1;
+	return 0;
+}
+
 template<typename T>
 void directions(T *returnArray, short int i, short int j) {
 	unsigned int count = 0;
@@ -489,15 +498,8 @@ void restart() {
 
 //1st -- Add priority according to number of figures in a row
 void PrAddFigInRow(point N,point A, point B, int k, int* pntDir) {
-	
 	cellPr[t[N.i][N.j] - 1][A.i][A.j] += 2 * pntDir[k] - 1;
-	if (t[N.i][N.j] == FIGURE_O)
-		cellPr[t[N.i][N.j] - 1][A.i][A.j]++;
-	
 	cellPr[t[N.i][N.j] - 1][B.i][B.j] += 2 * pntDir[k] - 1;
-	if (t[N.i][N.j] == FIGURE_O)
-		cellPr[t[N.i][N.j] - 1][B.i][B.j]++;
-		
 }
 
 //2nd -- Add priority in empty interval between equal figures
@@ -510,6 +512,51 @@ bool AddPrInInterv(point N, int k){
 		return 0;
 	}
 	return 1;
+}
+
+//3rd -- Decrease priority A or B if near obstacle
+void DecrPrIfObst(point N, point A, point B, int k) {
+	point cA = incrVectInd(k, A);
+	point cB = incrVectInd(k + 4, B);
+
+	int Adec = 0, Bdec = 0;
+	/*
+	----<-A
+	---X---
+	---X---
+	---X---
+	----<-B
+	*/
+	for (int i = figToWin; i > 0; i--) {
+		if (Adec == 0 && pOutside(cA))
+			Adec = i;
+		if (Bdec == 0 && pOutside(cB))
+			Bdec = i;
+
+		if (Adec == 0 && t[N.i][N.j] != t[cA.i][cA.j] && t[cA.i][cA.j] != 0)
+			Adec = i;
+		if (Bdec == 0 && t[N.i][N.j] != t[cB.i][cB.j] && t[cB.i][cB.j] != 0)
+			Bdec = i;
+
+		cA = incrVectInd(k, cA);
+		cB = incrVectInd(k + 4, cB);
+		/*
+		-------
+		---X<-A
+		---X---
+		---X<-B
+		-------
+		and so on
+		*/
+	}
+
+	cellPr[t[N.i][N.j] - 1][A.i][A.j] -= Bdec;
+	if (cellPr[t[N.i][N.j] - 1][A.i][A.j] < 0)
+		cellPr[t[N.i][N.j] - 1][A.i][A.j] = 0;
+
+	cellPr[t[N.i][N.j] - 1][B.i][B.j] -= Adec;
+	if (cellPr[t[N.i][N.j] - 1][B.i][B.j] < 0)
+		cellPr[t[N.i][N.j] - 1][B.i][B.j] = 0;
 }
 
 void computerSetPriorities() {
@@ -555,56 +602,11 @@ void computerSetPriorities() {
 					allowIntervRewrite = AddPrInInterv(N, k);
 
 				//hard bot
-				/*if (difficulty == 3 /*&& t[B.i][B.j] == 0 && t[A.i][A.j] != t[N.i][N.j])
+				if (difficulty == 3)
 				{
-					//border check
-					if (tableSize != figToWin) {
-						point pA = A;
-						point pB = B;
-						for (int q = pntDir[k]; q < figToWin - 1; q++) {
-							pA = incrVectInd(k + 4, pA);
-							pB = incrVectInd(k, pB);
-
-							if (pA.i >= int(tableSize) ||
-								pA.j >= int(tableSize) ||
-								pA.i < 0 ||
-								pA.j < 0) {
-								cellPr[A.i][A.j] = 0;
-							}
-							else if (t[pA.i][pA.j] != 0 && t[pA.i][pA.j] != t[N.i][N.j])
-								cellPr[A.i][A.j] = 0;
-
-							if (pB.i >= int(tableSize) ||
-								pB.j >= int(tableSize) ||
-								pB.i < 0 ||
-								pB.j < 0) {
-								cellPr[B.i][B.j] = 0;
-							}
-							else if (t[pB.i][pB.j] != 0 && t[pB.i][pB.j] != t[N.i][N.j])
-								cellPr[B.i][B.j] = 0;
-						}
-					}
-					else if (move <= 1) {
-						if ((A.i == 0 && A.j == 0) ||
-							(A.i == 0 && A.j == tableSize - 1) ||
-							(A.i == tableSize - 1 && A.j == 0) ||
-							(A.i == tableSize - 1 && A.j == tableSize - 1))
-							cellPr[A.i][A.j]++;
-						if ((B.i == 0 && B.j == 0) ||
-							(B.i == 0 && B.j == tableSize - 1) ||
-							(B.i == tableSize - 1 && B.j == 0) ||
-							(B.i == tableSize - 1 && B.j == tableSize - 1))
-							cellPr[B.i][B.j]++;
-					}
-					
-					point C = incrVectInd(k, B);
-					C = corrPnt(C);
-					if (t[C.i][C.j] == t[N.i][N.j]) {
-						int *tempDir = new int[4];
-						directions(tempDir, C);
-						cellPr[B.i][B.j] += tempDir[k];
-					}
-				}*/
+					if (t[A.i][A.j] != t[N.i][N.j])
+						DecrPrIfObst(N, A, B, k);
+				}
 
 				//add random numbers if easy difficulty
 				if (difficulty == 1) {
@@ -650,6 +652,11 @@ void computerMove() {
 		t[moveX[1]][moveY[1]] = FIGURE_O;
 	else
 		t[moveX[0]][moveY[0]] = FIGURE_O; //computer is always O
+
+	std::cout << max[0] << ' ' << max[1] << '\n';
+	std::cout << moveX[0] << ' ' << moveY[0] << '\n' << moveX[1] << ' ' << moveY[1] << '\n';
+
+	//max[0] - O; max[1] - X
 
 	//computerSetPriorities();
 
