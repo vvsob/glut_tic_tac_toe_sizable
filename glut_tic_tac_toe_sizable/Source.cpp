@@ -37,6 +37,8 @@ bool firstPlayer = 1;
 
 short int difficulty = 2;
 
+short int score[2] = { 0, 0 };
+
 short int **t;
 
 bool compPlay = 1;
@@ -521,13 +523,13 @@ void DecrPrIfObst(point N, point A, point B, int k) {
 
 	int Adec = 0, Bdec = 0;
 	/*
-	----<-A
+	-------
+	---X<-A
 	---X---
-	---X---
-	---X---
-	----<-B
+	---X<-B
+	-------
 	*/
-	for (int i = figToWin; i > 0; i--) {
+	for (int i = figToWin * 2; i > 0; i -= 2) {
 		if (Adec == 0 && pOutside(cA))
 			Adec = i;
 		if (Bdec == 0 && pOutside(cB))
@@ -542,9 +544,9 @@ void DecrPrIfObst(point N, point A, point B, int k) {
 		cB = incrVectInd(k + 4, cB);
 		/*
 		-------
-		---X<-A
 		---X---
-		---X<-B
+		---X<-A,B
+		---X---
 		-------
 		and so on
 		*/
@@ -653,8 +655,8 @@ void computerMove() {
 	else
 		t[moveX[0]][moveY[0]] = FIGURE_O; //computer is always O
 
-	std::cout << max[0] << ' ' << max[1] << '\n';
-	std::cout << moveX[0] << ' ' << moveY[0] << '\n' << moveX[1] << ' ' << moveY[1] << '\n';
+	//std::cout << max[0] << ' ' << max[1] << '\n';
+	//std::cout << moveX[0] << ' ' << moveY[0] << '\n' << moveX[1] << ' ' << moveY[1] << '\n';
 
 	//max[0] - O; max[1] - X
 
@@ -687,7 +689,66 @@ void drawFigs() {
 	glLineWidth(1);
 }
 
+void drawScore() {
+	std::string xs = "X: " + std::to_string(score[FIGURE_X - 1]);
+	std::string os = "O: " + std::to_string(score[FIGURE_O - 1]);
 
+	glColor3f(1, 0, 0);
+	char* c = new char[10];
+	int x1 = win_x_size / 3 - glutBitmapWidth(GLUT_BITMAP_TIMES_ROMAN_24, '0') * 10;
+
+	strcpy_s(c, 10, xs.c_str());
+	x1 += glutBitmapWidth(GLUT_BITMAP_TIMES_ROMAN_24, '0') * 2;
+
+	for (; *c != '\0'; c++) {
+		glRasterPos2f(x1, 30);
+		glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, *c);
+		x1 += glutBitmapWidth(GLUT_BITMAP_TIMES_ROMAN_24, *c) + 5;
+	}
+
+	glColor3f(0, 0, 1);
+	strcpy_s(c, 10, os.c_str());
+	x1 += glutBitmapWidth(GLUT_BITMAP_TIMES_ROMAN_24, '0') * 2;
+
+	for (; *c != '\0'; c++) {
+		glRasterPos2f(x1, 30);
+		glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, *c);
+		x1 += glutBitmapWidth(GLUT_BITMAP_TIMES_ROMAN_24, *c) + 5;
+	}
+}
+
+void drawDifficulty() {
+	std::string dif = "aa";
+
+	if (!compPlay) {
+		dif = "Human";
+		glColor3f(1, 1, 0);
+	}
+	else if (difficulty == 1) {
+		dif = "Easy bot";
+		glColor3f(0, 1, 0);
+	}
+	else if (difficulty == 2) {
+		dif = "Medium bot";
+		glColor3f(0, 0, 1);
+	}
+	else {
+		dif = "Hard bot";
+		glColor3f(1, 0, 0);
+	}
+
+	char* c = new char[12];
+	int x1 = win_x_size / 3 * 2 - glutBitmapWidth(GLUT_BITMAP_TIMES_ROMAN_24, '0') * dif.length();
+
+	strcpy_s(c, 12, dif.c_str());
+	x1 += glutBitmapWidth(GLUT_BITMAP_TIMES_ROMAN_24, '0') * 2;
+
+	for (; *c != '\0'; c++) {
+		glRasterPos2f(x1, 30);
+		glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, *c);
+		x1 += glutBitmapWidth(GLUT_BITMAP_TIMES_ROMAN_24, *c) + 5;
+	}
+}
 
 void RenderScene() {
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -710,6 +771,10 @@ void RenderScene() {
 			glVertex2f(win_x_size - border_indent, border_indent + frame_step * i);
 		}
 		glEnd();
+
+		drawScore();
+
+		drawDifficulty();
 
 		drawFigs();
 
@@ -833,7 +898,11 @@ void update(int value) {
 		}
 		RenderScene();
 		gameOver = 1;
-		Sleep(5000);
+
+		if (winCheck() != 0)
+			score[winCheck() - 1]++;
+
+		Sleep(3000);
 
 		RenderScene();
 
@@ -852,6 +921,9 @@ void update(int value) {
 }
 
 int main(int argc, char** argv) {
+	HWND hWnd = GetConsoleWindow();
+	ShowWindow(hWnd, SW_HIDE);
+	
 	srand(time(0));
 
 	runSettings();
